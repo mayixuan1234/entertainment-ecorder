@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>娱乐记录</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tailwind 配置 -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f8fafc',
+                            100: '#f1f5f9',
+                            200: '#e2e8f0',
+                            300: '#cbd5e1',
+                            400: '#94a3b8',
+                            500: '#64748b',
+                            600: '#475569',
+                            700: '#334155',
+                            800: '#1e293b',
+                            900: '#0f172a',
+                        },
+                        accent: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            300: '#86efac',
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* 自定义样式补充 */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        
+        /* 卡片悬浮效果 */
+        .card-hover {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* 输入框聚焦效果 */
+        .input-focus:focus {
+            outline: none;
+            border-color: #22c55e;
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+        }
+        
+        /* 按钮点击效果 */
+        .btn-active:active {
+            transform: scale(0.98);
+        }
+        
+        /* 平滑过渡 */
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* 隐藏滚动条 */
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+        .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* 自定义下拉箭头 */
+        .select-wrapper {
+            position: relative;
+        }
+        .select-wrapper::after {
+            content: '\f078';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-12">
+
+    <!-- 顶部导航 -->
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-100">
+        <nav class="max-w-4xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <!-- 网站标题 -->
+                <h1 class="text-xl font-semibold text-primary-800 flex items-center gap-2">
+                    <i class="fa-solid fa-book-open text-accent-500"></i>
+                    娱乐记录
+                </h1>
+                
+                <!-- 分类导航 -->
+                <div class="flex gap-1 overflow-x-auto pb-1 scrollbar-hide">
+                    <button 
+                        onclick="filterRecords('all')" 
+                        class="category-btn active px-4 py-2 text-sm font-medium rounded-full bg-accent-500 text-white transition-all"
+                        data-category="all"
+                    >
+                        全部
+                    </button>
+                    <button 
+                        onclick="filterRecords('novel')" 
+                        class="category-btn px-4 py-2 text-sm font-medium rounded-full bg-gray-100 text-primary-600 hover:bg-gray-200 transition-all"
+                        data-category="novel"
+                    >
+                        <i class="fa-solid fa-book mr-1"></i> 小说
+                    </button>
+                    <button 
+                        onclick="filterRecords('tv')" 
+                        class="category-btn px-4 py-2 text-sm font-medium rounded-full bg-gray-100 text-primary-600 hover:bg-gray-200 transition-all"
+                        data-category="tv"
+                    >
+                        <i class="fa-solid fa-tv mr-1"></i> 电视剧
+                    </button>
+                    <button 
+                        onclick="filterRecords('movie')" 
+                        class="category-btn px-4 py-2 text-sm font-medium rounded-full bg-gray-100 text-primary-600 hover:bg-gray-200 transition-all"
+                        data-category="movie"
+                    >
+                        <i class="fa-solid fa-film mr-1"></i> 电影
+                    </button>
+                    <button 
+                        onclick="filterRecords('game')" 
+                        class="category-btn px-4 py-2 text-sm font-medium rounded-full bg-gray-100 text-primary-600 hover:bg-gray-200 transition-all"
+                        data-category="game"
+                    >
+                        <i class="fa-solid fa-gamepad mr-1"></i> 游戏
+                    </button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <!-- 主内容区 -->
+    <main class="max-w-4xl mx-auto px-4 py-8">
+        
+        <!-- 新增记录模块 -->
+        <section class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
+            <h2 class="text-lg font-semibold text-primary-800 mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-plus-circle text-accent-500"></i>
+                新增记录
+            </h2>
+            
+            <form id="addForm" class="space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- 名称输入 -->
+                    <div>
+                        <label for="name" class="block text-sm font-medium text-primary-600 mb-1.5">名称</label>
+                        <input 
+                            type="text" 
+                            id="name" 
+                            placeholder="输入作品名称"
+                            class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 input-focus transition-colors"
+                            required
+                        >
+                    </div>
+                    
+                    <!-- 类型选择 -->
+                    <div>
+                        <label for="type" class="block text-sm font-medium text-primary-600 mb-1.5">类型</label>
+                        <div class="select-wrapper">
+                            <select 
+                                id="type" 
+                                class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 input-focus transition-colors appearance-none cursor-pointer pr-10"
+                                required
+                            >
+                                <option value="" disabled selected>请选择类型</option>
+                                <option value="novel">小说</option>
+                                <option value="tv">电视剧</option>
+                                <option value="movie">电影</option>
+                                <option value="game">游戏</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 备注输入 -->
+                <div>
+                    <label for="note" class="block text-sm font-medium text-primary-600 mb-1.5">备注</label>
+                    <textarea 
+                        id="note" 
+                        rows="2" 
+                        placeholder="简单描述你的感受（可选）"
+                        class="w-full px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 input-focus transition-colors resize-none"
+                    ></textarea>
+                </div>
+                
+                <!-- 提交按钮 -->
+                <button 
+                    type="submit" 
+                    class="w-full py-3 rounded-xl bg-accent-500 text-white font-medium hover:bg-accent-600 transition-all btn-active flex items-center justify-center gap-2"
+                >
+                    <i class="fa-solid fa-plus"></i>
+                    添加记录
+                </button>
+            </form>
+        </section>
+
+        <!-- 记录展示模块 -->
+        <section>
+            <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-semibold text-primary-800 flex items-center gap-2">
+                    <i class="fa-solid fa-list text-primary-400"></i>
+                    我的记录
+                </h2>
+                <span id="countBadge" class="px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-primary-500">
+                    共 0 条
+                </span>
+            </div>
+            
+            <!-- 记录列表 -->
+            <div id="recordsContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- 空状态 -->
+                <div id="emptyState" class="col-span-full py-16 text-center">
+                    <div class="w-20 h-20 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                        <i class="fa-solid fa-inbox text-3xl text-gray-300"></i>
+                    </div>
+                    <p class="text-primary-500 mb-2">暂无记录</p>
+                    <p class="text-sm text-primary-400">点击上方"新增记录"开始添加您的娱乐清单</p>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="text-center py-6 text-sm text-primary-400">
+        <p>数据存储在本地浏览器中，清除浏览器数据会导致记录丢失</p>
+    </footer>
+
+    <!-- 确认删除弹窗 -->
+    <div id="deleteModal" class="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 hidden flex items-center justify-center px-4">
+        <div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-xl fade-in">
+            <div class="text-center">
+                <div class="w-14 h-14 mx-auto mb-4 bg-red-50 rounded-full flex items-center justify-center">
+                    <i class="fa-solid fa-trash text-red-400 text-xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-primary-800 mb-2">确认删除</h3>
+                <p class="text-primary-500 text-sm mb-6">确定要删除这条记录吗？此操作无法撤销。</p>
+                <div class="flex gap-3">
+                    <button 
+                        onclick="closeModal()" 
+                        class="flex-1 py-2.5 rounded-xl border border-gray-200 text-primary-600 font-medium hover:bg-gray-50 transition-all btn-active"
+                    >
+                        取消
+                    </button>
+                    <button 
+                        id="confirmDeleteBtn" 
+                        class="flex-1 py-2.5 rounded-xl bg-red-500 text-white font-medium hover:bg-red-600 transition-all btn-active"
+                    >
+                        删除
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript 代码 -->
+    <script>
+        /**
+         * ====================
+         * 数据层 (Data Layer)
+         * 负责 localStorage 的 CRUD 操作
+         * ====================
+         */
+        
+        // 存储键名
+        const STORAGE_KEY = 'entertainment_records';
+        
+        /**
+         * 获取所有记录
+         * @returns {Array} 记录数组
+         */
+        function getRecords() {
+            try {
+                const data = localStorage.getItem(STORAGE_KEY);
+                return data ? JSON.parse(data) : [];
+            } catch (e) {
+                console.error('读取存储失败:', e);
+                return [];
+            }
+        }
+        
+        /**
+         * 保存所有记录
+         * @param {Array} records - 记录数组
+         */
+        function saveRecords(records) {
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+            } catch (e) {
+                console.error('保存存储失败:', e);
+            }
+        }
+        
+        /**
+         * 添加新记录
+         * @param {Object} record - 新记录对象
+         */
+        function addRecord(record) {
+            const records = getRecords();
+            records.unshift(record);
+            saveRecords(records);
+        }
+        
+        /**
+         * 删除记录
+         * @param {string} id - 记录ID
+         */
+        function deleteRecord(id) {
+            const records = getRecords();
+            const filtered = records.filter(r => r.id !== id);
+            saveRecords(filtered);
+        }
+
+        /**
+         * ====================
+         * 渲染层 (Render Layer)
+         * 负责页面渲染逻辑
+         * ====================
+         */
+        
+        // 类型配置映射
+        const TYPE_CONFIG = {
+            novel: { label: '小说', icon: 'fa-book', color: 'bg-blue-50 text-blue-500' },
+            tv: { label: '电视剧', icon: 'fa-tv', color: 'bg-purple-50 text-purple-500' },
+            movie: { label: '电影', icon: 'fa-film', color: 'bg-orange-50 text-orange-500' },
+            game: { label: '游戏', icon: 'fa-gamepad', color: 'bg-green-50 text-green-500' }
+        };
+        
+        /**
+         * 渲染记录列表
+         * @param {string} filter - 筛选类型 ('all' | 'novel' | 'tv' | 'movie' | 'game')
+         */
+        function renderRecords(filter = 'all') {
+            const records = getRecords();
+            const container = document.getElementById('recordsContainer');
+            const emptyState = document.getElementById('emptyState');
+            const countBadge = document.getElementById('countBadge');
+            
+            // 筛选记录
+            const filteredRecords = filter === 'all' 
+                ? records 
+                : records.filter(r => r.type === filter);
+            
+            // 更新计数
+            countBadge.textContent = `共 ${filteredRecords.length} 条`;
+            
+            // 清空容器
+            container.innerHTML = '';
+            
+            // 空状态处理
+            if (filteredRecords.length === 0) {
+                container.appendChild(emptyState);
+                emptyState.style.display = 'block';
+                return;
+            }
+            
+            emptyState.style.display = 'none';
+            
+            // 渲染卡片
+            filteredRecords.forEach(record => {
+                const config = TYPE_CONFIG[record.type] || TYPE_CONFIG.novel;
+                const card = createRecordCard(record, config);
+                container.appendChild(card);
+            });
+        }
+        
+        /**
+         * 创建记录卡片元素
+         * @param {Object} record - 记录对象
+         * @param {Object} config - 类型配置
+         * @returns {HTMLElement} 卡片元素
+         */
+        function createRecordCard(record, config) {
+            const card = document.createElement('div');
+            card.className = 'bg-white rounded-xl p-5 shadow-sm border border-gray-100 card-hover fade-in';
+            card.innerHTML = `
+                <div class="flex items-start justify-between mb-3">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${config.color}">
+                        <i class="fa-solid ${config.icon}"></i>
+                        ${config.label}
+                    </span>
+                    <button 
+                        onclick="openDeleteModal('${record.id}')" 
+                        class="p-1.5 rounded-lg text-primary-400 hover:bg-red-50 hover:text-red-500 transition-all"
+                        aria-label="删除记录"
+                    >
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </div>
+                <h3 class="text-base font-semibold text-primary-800 mb-2 line-clamp-1">${escapeHtml(record.name)}</h3>
+                ${record.note ? `
+                    <p class="text-sm text-primary-500 line-clamp-2">${escapeHtml(record.note)}</p>
+                ` : ''}
+                <div class="mt-4 pt-3 border-t border-gray-50">
+                    <span class="text-xs text-primary-400">${formatDate(record.date)}</span>
+                </div>
+            `;
+            return card;
+        }
+        
+        /**
+         * HTML转义，防止XSS攻击
+         * @param {string} text - 待转义文本
+         * @returns {string} 转义后的文本
+         */
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        /**
+         * 格式化日期
+         * @param {string} dateStr - 日期字符串
+         * @returns {string} 格式化后的日期
+         */
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        }
+
+        /**
+         * ====================
+         * 事件绑定层 (Event Layer)
+         * 负责用户交互事件处理
+         * ====================
+         */
+        
+        // 当前筛选类型
+        let currentFilter = 'all';
+        
+        // 待删除记录ID
+        let deleteTargetId = null;
+        
+        /**
+         * 初始化事件绑定
+         */
+        function initEvents() {
+            // 表单提交事件
+            document.getElementById('addForm').addEventListener('submit', handleAddFormSubmit);
+            
+            // 确认删除按钮事件
+            document.getElementById('confirmDeleteBtn').addEventListener('click', handleConfirmDelete);
+            
+            // ESC关闭弹窗
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeModal();
+                }
+            });
+            
+            // 点击遮罩关闭弹窗
+            document.getElementById('deleteModal').addEventListener('click', (e) => {
+                if (e.target === document.getElementById('deleteModal')) {
+                    closeModal();
+                }
+            });
+        }
+        
+        /**
+         * 处理添加表单提交
+         * @param {Event} e - 表单提交事件
+         */
+        function handleAddFormSubmit(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('name').value.trim();
+            const type = document.getElementById('type').value;
+            const note = document.getElementById('note').value.trim();
+            
+            if (!name || !type) return;
+            
+            // 创建新记录
+            const newRecord = {
+                id: Date.now().toString(),
+                name: name,
+                type: type,
+                note: note,
+                date: new Date().toISOString()
+            };
+            
+            // 保存并刷新
+            addRecord(newRecord);
+            renderRecords(currentFilter);
+            
+            // 重置表单
+            document.getElementById('addForm').reset();
+            
+            // 滚动到记录列表
+            document.getElementById('recordsContainer').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        /**
+         * 筛选记录
+         * @param {string} category - 分类类型
+         */
+        function filterRecords(category) {
+            currentFilter = category;
+            
+            // 更新按钮样式
+            document.querySelectorAll('.category-btn').forEach(btn => {
+                if (btn.dataset.category === category) {
+                    btn.classList.remove('bg-gray-100', 'text-primary-600', 'hover:bg-gray-200');
+                    btn.classList.add('bg-accent-500', 'text-white');
+                } else {
+                    btn.classList.add('bg-gray-100', 'text-primary-600', 'hover:bg-gray-200');
+                    btn.classList.remove('bg-accent-500', 'text-white');
+                }
+            });
+            
+            // 重新渲染
+            renderRecords(category);
+        }
+        
+        /**
+         * 打开删除确认弹窗
+         * @param {string} id - 记录ID
+         */
+        function openDeleteModal(id) {
+            deleteTargetId = id;
+            document.getElementById('deleteModal').classList.remove('hidden');
+            document.getElementById('confirmDeleteBtn').focus();
+        }
+        
+        /**
+         * 关闭删除确认弹窗
+         */
+        function closeModal() {
+            document.getElementById('deleteModal').classList.add('hidden');
+            deleteTargetId = null;
+        }
+        
+        /**
+         * 处理确认删除
+         */
+        function handleConfirmDelete() {
+            if (deleteTargetId) {
+                deleteRecord(deleteTargetId);
+                renderRecords(currentFilter);
+                closeModal();
+            }
+        }
+
+        /**
+         * ====================
+         * 初始化 (Init)
+         * ====================
+         */
+        
+        /**
+         * 页面加载完成后执行初始化
+         */
+        document.addEventListener('DOMContentLoaded', () => {
+            initEvents();
+            renderRecords('all');
+        });
+    </script>
+</body>
+</html>
