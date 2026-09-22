@@ -1438,9 +1438,6 @@
                     <div class="flex items-center justify-between mb-1.5">
                         <label class="text-sm font-medium" style="color: var(--text-secondary);">角色 / 人物</label>
                         <div class="flex items-center gap-2">
-                            <button type="button" onclick="loadKruegerSample('edit')" class="px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all" style="background-color: var(--card-bg-alt); color: var(--text-secondary); border: 1px solid var(--border-color);">
-                                <i class="fa-solid fa-flask text-[10px] mr-1"></i>加载 Krueger 示例
-                            </button>
                             <button type="button" onclick="exportCharacterArchive('edit')" class="px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all" style="background-color: var(--primary-500); color: #fff;">
                                 <i class="fa-solid fa-image text-[10px] mr-1"></i>导出档案图片
                             </button>
@@ -2784,7 +2781,7 @@
                 return;
             }
 
-            // 1) 记住当前折叠状态
+            // 1) 记住当前折叠状态（导出后恢复用）
             const originalState = [];
             cards.forEach(card => {
                 const radarPanel = card.querySelector('.radar-panel');
@@ -2797,6 +2794,10 @@
                     })
                 });
             });
+
+            const recordName = document.getElementById(mode === 'edit' ? 'editName' : 'name')?.value?.trim() || '作品';
+            const bg = getComputedStyle(document.body).backgroundColor || '#ffffff';
+            let exported = 0;
 
             try {
                 // 2) 强制展开所有面板并刷新雷达图
@@ -2820,7 +2821,6 @@
                         }
                         if (icon) icon.style.transform = 'rotate(180deg)';
                     });
-                    // 重绘雷达图，确保 canvas 内容完整
                     const canvas = card.querySelector('.char-radar');
                     if (canvas) {
                         const radar = {};
@@ -2831,50 +2831,50 @@
                     }
                 });
 
-                // 等待 DOM 与 canvas 渲染完成
                 await new Promise(r => requestAnimationFrame(r));
                 await new Promise(r => setTimeout(r, 400));
 
-                // 3) 克隆并清理为只读档案视图
-                const clone = container.cloneNode(true);
-                cleanArchiveClone(clone);
+                // 3) 逐卡导出：每张角色卡单独一张高清图（分割导出，避免超长图模糊）
+                for (let idx = 0; idx < cards.length; idx++) {
+                    const card = cards[idx];
+                    const clone = card.cloneNode(true);
+                    cleanArchiveClone(clone);
 
-                // 4) 放入离屏容器并设置适合导出的宽度
-                const exportWidth = window.innerWidth > 800 ? 760 : Math.max(320, window.innerWidth - 32);
-                const exportWrap = document.createElement('div');
-                exportWrap.className = 'character-archive-export';
-                exportWrap.style.cssText = `position:fixed; left:-9999px; top:0; width:${exportWidth}px; z-index:-1; overflow:hidden;`;
-                exportWrap.appendChild(clone);
-                document.body.appendChild(exportWrap);
+                    // 单卡固定 800px 宽，高度按内容自适应
+                    clone.style.cssText = 'width:800px; max-width:800px; margin:0; box-sizing:border-box;';
+                    const wrap = document.createElement('div');
+                    wrap.className = 'character-archive-export';
+                    wrap.style.cssText = 'position:fixed; left:-9999px; top:0; width:800px; z-index:-1; overflow:hidden; background:' + bg + ';';
+                    wrap.appendChild(clone);
+                    document.body.appendChild(wrap);
 
-                // 5) 计算实际高度，防止截断
-                const rect = clone.getBoundingClientRect();
+                    const rect = clone.getBoundingClientRect();
+                    const canvas = await html2canvas(clone, {
+                        scale: 3,
+                        useCORS: true,
+                        allowTaint: true,
+                        backgroundColor: bg,
+                        width: 800,
+                        height: Math.max(rect.height, 100),
+                        logging: false
+                    });
+                    wrap.remove();
 
-                // 6) html2canvas 截图
-                const bg = getComputedStyle(document.body).backgroundColor || '#ffffff';
-                const canvas = await html2canvas(clone, {
-                    scale: 2,
-                    useCORS: true,
-                    allowTaint: true,
-                    backgroundColor: bg,
-                    width: exportWidth,
-                    height: rect.height,
-                    logging: false
-                });
+                    const link = document.createElement('a');
+                    const suffix = cards.length > 1 ? '_' + (idx + 1) : '';
+                    link.download = `角色档案_${recordName}${suffix}.png`;
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+                    exported++;
+                    await new Promise(r => setTimeout(r, 300));
+                }
 
-                // 7) 下载
-                const link = document.createElement('a');
-                const recordName = document.getElementById(mode === 'edit' ? 'editName' : 'name')?.value?.trim() || '作品';
-                link.download = `角色档案_${recordName}_${new Date().toLocaleDateString('zh-CN')}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
+                alert(`已导出 ${exported} 张角色档案图片，每张为高清分割图。`);
             } catch (err) {
                 console.error('导出角色档案失败:', err);
                 alert('导出失败：' + (err.message || '未知错误'));
             } finally {
-                // 8) 清理离屏容器并恢复折叠状态
-                const exportWrap = document.body.querySelector('.character-archive-export');
-                if (exportWrap) exportWrap.remove();
+                // 4) 恢复折叠状态
                 cards.forEach((card, idx) => {
                     const state = originalState[idx];
                     const radarPanel = card.querySelector('.radar-panel');
@@ -3040,56 +3040,6 @@
             });
         }
 
-        function loadKruegerSample(mode = 'edit') {
-            const containerId = mode === 'edit' ? 'editCharactersContainer' : 'charactersContainer';
-            const container = document.getElementById(containerId);
-            if (!container) return;
-            container.innerHTML = '';
-            const data = {
-                name: 'Krueger / 克鲁格',
-                role: 'protagonist',
-                image: 'https://static.wikia.nocookie.net/callofduty/images/4/4b/Krueger_CoDM.jpg',
-                radar: {
-                    bodyStrength: 10.0,
-                    intelligence: 8.4,
-                    charm: 10.0,
-                    strength: 10.0,
-                    agility: 8.6,
-                    endurance: 10.0,
-                    speed: 8.6,
-                    accuracy: 8.7,
-                    comprehensive: 9.3
-                },
-                gender: 'male',
-                age: '41',
-                height: '178 cm',
-                occupation: '雇佣兵',
-                nickname: '克鲁格',
-                species: 'human',
-                orientation: 'bisexual',
-                relationship: 'noemotion',
-                introvertExtrovert: 5,
-                sensitiveRational: 5,
-                optimisticPessimistic: 2,
-                gentleCold: 3,
-                proudHumble: 3,
-                carefulImpulsive: 0,
-                strengths: '全能',
-                weaknesses: '被冤枉通缉成为黑户，未翻案',
-                note: '使命召唤（Call of Duty）系列角色，冷酷高效的雇佣兵。'
-            };
-            addCharacterRow(mode, data);
-            // 自动展开雷达图方便预览
-            setTimeout(() => {
-                const card = container.querySelector('.character-card');
-                if (card) {
-                    const radarBtn = card.querySelector('.radar-toggle-btn');
-                    if (radarBtn && card.querySelector('.radar-panel').classList.contains('collapsed')) {
-                        toggleCharRadarPanel(radarBtn);
-                    }
-                }
-            }, 50);
-        }
 
         function drawRadarChart(canvas, values, size = 200, title = '') {
             title = title || canvas.dataset.title || '';
